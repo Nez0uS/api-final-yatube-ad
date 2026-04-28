@@ -7,7 +7,6 @@ from posts.models import Post, Group, Comment, Follow
 from .serializers import (
     PostSerializer, GroupSerializer, CommentSerializer, FollowSerializer
 )
-from .permissions import IsAuthorOrReadOnlyPermission
 
 User = get_user_model()
 
