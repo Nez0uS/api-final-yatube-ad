@@ -1,4 +1,3 @@
-# api/views.py
 from rest_framework import viewsets, permissions, filters
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
@@ -33,29 +32,21 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [
         permissions.IsAuthenticatedOrReadOnly,
         IsAuthorOrReadOnly
     ]
-    queryset = Comment.objects.all()
 
     def get_queryset(self):
         post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(
-            Post,
-            id=post_id
-        )
-        return Comment.objects.filter(
-            post=post
-        )
+        post = get_object_or_404(Post, id=post_id)
+        return Comment.objects.filter(post=post)
 
     def perform_create(self, serializer):
         post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(
-            Post,
-            id=post_id
-        )
+        post = get_object_or_404(Post, id=post_id)
         serializer.save(
             author=self.request.user,
             post=post
@@ -63,19 +54,21 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 class FollowViewSet(viewsets.ModelViewSet):
+    queryset = Follow.objects.all()
     serializer_class = FollowSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['following__username']
-    queryset = Follow.objects.all()
 
     def get_queryset(self):
-        return Follow.objects.filter(
-            user=self.request.user
-        )
+        return Follow.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         following_username = self.request.data.get('following')
+        if not following_username:
+            raise ValidationError(
+                {'following': ['Обязательное поле.']}
+            )
         following = get_object_or_404(
             User,
             username=following_username
