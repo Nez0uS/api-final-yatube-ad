@@ -23,11 +23,47 @@ class PostViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    def list(self, request, *args, **kwargs):
+        limit = request.query_params.get('limit')
+        offset = request.query_params.get('offset')
+        if limit is None and offset is None:
+            # Без пагинации — возвращаем список
+            queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+
+        # С пагинацией
+        try:
+            limit = int(limit) if limit else 10
+            offset = int(offset) if offset else 0
+        except ValueError:
+            return Response({'error': 'Invalid limit/offset'}, status=400)
+
+        total = self.filter_queryset(self.get_queryset()).count()
+        queryset = self.filter_queryset(
+            self.get_queryset()
+        )[offset:offset + limit]
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'count': total,
+            'next': None,
+            'previous': None,
+            'results': serializer.data
+        })
+
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (
+        permissions.IsAuthenticatedOrReadOnly,
+    )
+
+    def list(self, request, *args, **kwargs):
+        # Группы возвращаем списком (пагинация не требуется)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -46,7 +82,16 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         post_id = self.kwargs.get('post_id')
         post = get_object_or_404(Post, id=post_id)
-        serializer.save(author=self.request.user, post=post)
+        serializer.save(
+            author=self.request.user,
+            post=post
+        )
+
+    def list(self, request, *args, **kwargs):
+        # Комментарии возвращаем списком (без пагинации)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class FollowViewSet(viewsets.ModelViewSet):
@@ -57,6 +102,12 @@ class FollowViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Follow.objects.filter(user=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        # Подписки возвращаем списком
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -76,8 +127,7 @@ class FollowViewSet(viewsets.ModelViewSet):
                 'Нельзя подписаться на самого себя!'
             )
         if Follow.objects.filter(
-            user=self.request.user,
-            following=following
+            user=self.request.user, following=following
         ).exists():
             raise ValidationError(
                 'Вы уже подписаны на этого пользователя!'
