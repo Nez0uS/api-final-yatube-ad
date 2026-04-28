@@ -1,12 +1,10 @@
-from rest_framework import viewsets, permissions, filters, status
+from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from posts.models import Post, Group, Comment, Follow
-from .serializers import (
-    PostSerializer, GroupSerializer, CommentSerializer, FollowSerializer
-)
+from .serializers import PostSerializer, GroupSerializer
 from .permissions import IsAuthorOrReadOnlyPermission
 
 User = get_user_model()
