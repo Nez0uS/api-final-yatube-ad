@@ -9,6 +9,9 @@ class Group(models.Model):
     slug = models.SlugField(unique=True)
     description = models.TextField()
 
+    class Meta:
+        ordering = ['-id']
+
     def __str__(self):
         return self.title
 
@@ -27,6 +30,9 @@ class Post(models.Model):
         related_name='posts', blank=True, null=True
     )
 
+    class Meta:
+        ordering = ['-id']
+
     def __str__(self):
         return self.text
 
@@ -43,11 +49,13 @@ class Comment(models.Model):
         'Дата добавления', auto_now_add=True, db_index=True
     )
 
+    class Meta:
+        ordering = ['-id']
+
     def __str__(self):
         return f'{self.author} - {self.text[:20]}'
 
 
-# НОВАЯ МОДЕЛЬ Follow
 class Follow(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='follower'
@@ -57,6 +65,7 @@ class Follow(models.Model):
     )
 
     class Meta:
+        ordering = ['-id']
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'following'],

@@ -1,12 +1,15 @@
-# TODO:  Напишите свой вариант
-from rest_framework import viewsets, permissions, filters
-from rest_framework.exceptions import PermissionDenied
+from rest_framework import viewsets, permissions, filters, status
+from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 from posts.models import Post, Group, Comment, Follow
 from .serializers import (
     PostSerializer, GroupSerializer, CommentSerializer, FollowSerializer
 )
 from .permissions import IsAuthorOrReadOnlyPermission
+
+User = get_user_model()
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -68,8 +71,20 @@ class FollowViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Follow.objects.filter(user=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        following_username = request.data.get('following')
+        if not following_username:
+            return Response(
+                {'following': ['Это поле обязательно.']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
-        following = serializer.validated_data['following']
+        following_username = self.request.data.get('following')
+        following = get_object_or_404(User, username=following_username)
         if self.request.user == following:
-            raise PermissionDenied('Нельзя подписаться на самого себя!')
-        serializer.save(user=self.request.user)
+            raise ValidationError('Нельзя подписаться на самого себя!')
+        if Follow.objects.filter(user=self.request.user, following=following).exists():
+            raise ValidationError('Вы уже подписаны на этого пользователя!')
+        serializer.save(user=self.request.user, following=following)
