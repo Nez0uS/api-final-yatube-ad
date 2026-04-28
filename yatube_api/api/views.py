@@ -1,3 +1,4 @@
+# api/views.py
 from rest_framework import viewsets, permissions, filters
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
@@ -26,18 +27,16 @@ class PostViewSet(viewsets.ModelViewSet):
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [
-        permissions.IsAuthenticatedOrReadOnly
-    ]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [
         permissions.IsAuthenticatedOrReadOnly,
         IsAuthorOrReadOnly
     ]
+    queryset = Comment.objects.all()
 
     def get_queryset(self):
         post_id = self.kwargs.get('post_id')
@@ -47,10 +46,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         post_id = self.kwargs.get('post_id')
         post = get_object_or_404(Post, id=post_id)
-        serializer.save(
-            author=self.request.user,
-            post=post
-        )
+        serializer.save(author=self.request.user, post=post)
 
 
 class FollowViewSet(viewsets.ModelViewSet):
