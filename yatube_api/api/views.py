@@ -1,10 +1,12 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, filters, status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from posts.models import Post, Group, Comment, Follow
-from .serializers import PostSerializer, GroupSerializer
+from .serializers import (
+    PostSerializer, GroupSerializer, CommentSerializer, FollowSerializer
+)
 from .permissions import IsAuthorOrReadOnlyPermission
 
 User = get_user_model()
@@ -13,7 +15,7 @@ User = get_user_model()
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = [IsAuthorOrReadOnlyPermission]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -40,6 +42,8 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
@@ -68,8 +72,10 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 class FollowViewSet(viewsets.ModelViewSet):
+    serializer_class = FollowSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['following__username']
 
     def get_queryset(self):
         return Follow.objects.filter(user=self.request.user)
@@ -85,14 +91,22 @@ class FollowViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         following_username = self.request.data.get('following')
-        following = get_object_or_404(User, username=following_username)
+        following = get_object_or_404(
+            User,
+            username=following_username
+        )
         if self.request.user == following:
             raise ValidationError(
                 'Нельзя подписаться на самого себя!'
             )
         if Follow.objects.filter(
-                user=self.request.user,
-                following=following
+            user=self.request.user,
+            following=following
         ).exists():
-            raise ValidationError('Вы уже подписаны на этого пользователя!')
-        serializer.save(user=self.request.user, following=following)
+            raise ValidationError(
+                'Вы уже подписаны на этого пользователя!'
+            )
+        serializer.save(
+            user=self.request.user,
+            following=following
+        )
