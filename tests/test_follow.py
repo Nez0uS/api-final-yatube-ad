@@ -117,7 +117,7 @@ class TestFollowAPI:
             f'`{self.url}` возвращает словарь с данными новой подписки. '
             '{additional_msg}'
         )
-        assert type(test_data) == dict, msg_error.format(additional_msg='')
+        assert isinstance(test_data, dict), msg_error.format(additional_msg='')
         assert test_data.get('user') == user.username, (
             msg_error.format(
                 additional_msg=('Сейчас ключ `user` отстутствует или '
