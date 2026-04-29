@@ -7,6 +7,9 @@ User = get_user_model()
 
 class PostSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField(read_only=True)
+    group = serializers.PrimaryKeyRelatedField(
+        queryset=Group.objects.all(), required=False, allow_null=True
+    )
 
     class Meta:
         model = Post
@@ -32,8 +35,7 @@ class CommentSerializer(serializers.ModelSerializer):
 class FollowSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
     following = serializers.SlugRelatedField(
-        slug_field='username',
-        queryset=User.objects.all()
+        slug_field='username', queryset=User.objects.all()
     )
 
     class Meta:
